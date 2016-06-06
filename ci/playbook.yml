@@ -1,0 +1,42 @@
+---
+- hosts: ci
+  become: true
+  vars:
+    registration_open: false
+    limit_to_organisation: nextcloud
+    drone_version: "0.4"
+
+  tasks:
+  - name: add debian docker repository key
+    apt_key: id=58118E89F3A912897C070ADBF76221572C52609D keyserver=hkp://p80.pool.sks-keyservers.net:80 state=present
+
+  - name: add debian docker repository
+    apt_repository: repo='deb https://apt.dockerproject.org/repo debian-jessie main' state=present
+
+  - name: update packages cache
+    apt: update_cache=yes cache_valid_time=3600
+
+  - name: install packages
+    apt: name={{ item.name }}
+    with_items:
+      - { name: 'docker-engine' }
+
+  - name: create drone config folder
+    file: path=/etc/drone state=directory mode=0755
+
+  - name: create drone config
+    template: src=dronerc.j2 dest=/etc/drone/dronerc
+    notify:
+      - restart drone
+
+  - command: docker inspect drone
+    register: drone_started
+    ignore_errors: True
+
+  - name: start drone docker container
+    shell: docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+    when: drone_started|failed
+
+  handlers:
+    - name: restart drone
+      shell: docker stop drone && docker rm drone && docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
