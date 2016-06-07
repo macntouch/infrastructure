@@ -2,9 +2,9 @@
 - hosts: ci
   become: true
   vars:
-    registration_open: false
-    limit_to_organisation: nextcloud
-    drone_version: "0.4"
+    drone_open: false
+    drone_orgs: nextcloud
+    drone_version: "0.5"
 
   tasks:
   - name: add APT docker repository key
@@ -26,11 +26,8 @@
     with_items:
       - { name: 'docker-engine' }
 
-  - name: create drone config folder
-    file: path=/etc/drone state=directory mode=0755
-
   - name: create drone config
-    template: src=dronerc.j2 dest=/etc/drone/dronerc
+    template: src=dronerc.j2 dest=/etc/dronerc
     notify:
       - restart drone
 
@@ -39,9 +36,9 @@
     ignore_errors: True
 
   - name: start drone docker container
-    shell: docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+    shell: docker run --volume /var/lib/drone:/var/lib/drone --env-file /etc/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
     when: drone_started|failed
 
   handlers:
     - name: restart drone
-      shell: docker stop drone && docker rm drone && docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+      shell: docker stop drone && docker rm drone && docker run --volume /var/lib/drone:/var/lib/drone --env-file /etc/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
