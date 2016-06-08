@@ -1,0 +1,48 @@
+---
+- hosts: letsencrypt
+  vars:
+    wellknown_dir: /var/www/acme-challenge
+
+  tasks:
+  - name: update packages cache
+    apt: update_cache=yes cache_valid_time=3600
+
+  - name: install packages
+    apt: name={{ item.name }}
+    with_items:
+      - { name: 'curl' }
+      - { name: 'git' }
+
+  - name: clone letsencrypt.sh
+    git: repo=https://github.com/lukas2511/letsencrypt.sh dest=/opt/letsencrypt.sh
+
+  - name: create letsencrypt.sh config folder
+    file: path=/etc/letsencrypt.sh state=directory mode=0755
+
+  - name: create letsencrypt.sh main config
+    template: src=config.j2 dest=/etc/letsencrypt.sh/config
+
+  - name: create letsencrypt.sh domain config
+    file: path=/etc/letsencrypt.sh/domains.txt state=touch mode=0600
+
+  - name: create wellknown dir
+    file: path={{ wellknown_dir }} state=directory mode=0755
+
+  - name: create letsencrypt.sh certs folder
+    file: path=/etc/letsencrypt.sh/certs state=directory mode=0700
+
+  - name: place acme-challenges apache config
+    template: src=acme-challenges.conf.j2 dest=/etc/apache2/conf-available/acme-challenges.conf mode=0644
+
+  - name: activate acme-challenges
+    file:  state=link src=/etc/apache2/conf-available/acme-challenges.conf dest=/etc/apache2/conf-enabled/acme-challenges.conf
+    notify:
+      - reload apache
+
+  - name: add letsencrypt cron job
+    cron: name="update letsencrypt certs" weekday="2" hour="2" minute="2"
+        user="root" job="/opt/letsencrypt.sh/letsencrypt.sh -c"
+
+  handlers:
+    - name: reload apache
+      service: name=apache2 state=reloaded
