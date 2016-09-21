@@ -8,7 +8,7 @@ Create a file `hosts` with following content:
 
 ```
 [ci]
-IP ansible_ssh_user=USER_NAME ansible_become_pass=USER_PASSWORD github_client_id=ID github_client_secret=SECRET
+IP ansible_ssh_user=USER_NAME ansible_become_pass=USER_PASSWORD github_client_id=ID github_client_secret=SECRET drone_secret=DRONE_SECRET
 ```
 
  * **IP** - IP address of the server
@@ -16,13 +16,14 @@ IP ansible_ssh_user=USER_NAME ansible_become_pass=USER_PASSWORD github_client_id
  * **USER_PASSWORD** - ssh user password for use with `sudo`
  * **ID** - client ID from GitHub ([generate personal](https://github.com/settings/applications/new) or [generate organisation](https://github.com/organizations/ORGANISATION/settings/applications/new))
  * **SECRET** - client secret from GitHub (see previous item)
+ * **DRONE_SECRET** - secret that build agents use to connect to the server
 
 ### Optional configuration
 
 At the beginning of the `playbook.yml` there are configuration variables to make it easy to update key parameter of the instance.
 
- * `registration_open` - set this to `true` to allow users to register at this drone instance (default: `false`)
- * `limit_to_organisation` - this limits the repositories that could be enabled on this instance to an GitHub organisation (default: `nextcloud`)
+ * `drone_open` - set this to `true` to allow users to register at this drone instance (default: `false`)
+ * `drone_orgs` - this limits the repositories that could be enabled on this instance to an GitHub organisation (default: `nextcloud`)
  * `drone_version` - the used docker version of the image `drone/drone`
 
 ### Deploy this

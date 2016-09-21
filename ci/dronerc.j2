@@ -1,4 +1,10 @@
-REMOTE_DRIVER=github
-REMOTE_CONFIG=https://github.com?client_id={{ github_client_id }}&client_secret={{ github_client_secret }}&open={{ registration_open }}&orgs={{ limit_to_organisation }}
-PUBLIC_MODE=true
+DRONE_GITHUB=true
+DRONE_GITHUB_CLIENT={{ github_client_id }}
+DRONE_GITHUB_SECRET={{ github_client_secret }}
+DRONE_OPEN={{ drone_open }}
+DRONE_ADMIN={{ drone_admins }}
+DRONE_ORGS={{ drone_orgs }}
+DRONE_SECRET={{ drone_secret }}
 GIN_MODE=release
+I_UNDERSTAND_I_AM_USING_AN_UNSTABLE_VERSION=true
+I_AGREE_TO_FIX_BUGS_AND_NOT_FILE_BUGS=true

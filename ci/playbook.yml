@@ -2,9 +2,12 @@
 - hosts: ci
   become: true
   vars:
-    registration_open: false
-    limit_to_organisation: nextcloud
-    drone_version: "0.4"
+    drone_open: false
+    drone_orgs: nextcloud
+    drone_version: "0.5"
+    drone_timeout: "10m0s"
+    drone_max_procs: 8
+    drone_server: "http://172.16.0.2"
 
   tasks:
   - name: add APT docker repository key
@@ -13,7 +16,7 @@
   - name: add debian docker repository
     apt_repository: repo='deb https://apt.dockerproject.org/repo debian-jessie main' state=present
     when: ansible_distribution == 'Debian' and ansible_distribution_release == 'jessie'
-  
+
   - name: add ubuntu docker repository
     apt_repository: repo='deb https://apt.dockerproject.org/repo ubuntu-xenial main' state=present
     when: ansible_distribution == 'Ubuntu' and ansible_distribution_release == 'xenial'
@@ -26,22 +29,35 @@
     with_items:
       - { name: 'docker-engine' }
 
-  - name: create drone config folder
-    file: path=/etc/drone state=directory mode=0755
-
   - name: create drone config
-    template: src=dronerc.j2 dest=/etc/drone/dronerc
+    template: src=dronerc.j2 dest=/etc/dronerc
     notify:
       - restart drone
+
+  - name: create drone agent config
+    template: src=droneagentrc.j2 dest=/etc/droneagentrc
+    notify:
+      - restart drone-agent
 
   - command: docker inspect drone
     register: drone_started
     ignore_errors: True
 
   - name: start drone docker container
-    shell: docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+    shell: docker run --volume /var/lib/drone:/var/lib/drone --env-file /etc/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
     when: drone_started|failed
+
+  - command: docker inspect drone-agent
+    register: drone_agent_started
+    ignore_errors: True
+
+  - name: start drone-agent docker container
+    shell: docker run --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/droneagentrc --restart=always --detach=true --name=drone-agent drone/drone:{{ drone_version }} agent
+    when: drone_agent_started|failed
 
   handlers:
     - name: restart drone
-      shell: docker stop drone && docker rm drone && docker run --volume /var/lib/drone:/var/lib/drone --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/drone/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+      shell: docker stop drone && docker rm drone && docker run --volume /var/lib/drone:/var/lib/drone --env-file /etc/dronerc --restart=always --publish=80:8000 --detach=true --name=drone drone/drone:{{ drone_version }}
+
+    - name: restart drone-agent
+      shell: docker stop drone-agent && docker rm drone-agent && docker run --volume /var/run/docker.sock:/var/run/docker.sock --env-file /etc/droneagentrc --restart=always --detach=true --name=drone-agent drone/drone:{{ drone_version }} agent
